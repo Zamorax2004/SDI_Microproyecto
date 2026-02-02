@@ -83,3 +83,43 @@ Future<void> _loadHighScore() async {
       });
     }
   }
+  void _initializeGame() {
+    _timer?.cancel();
+    _flippedIndices.clear();
+    _isProcessing = false;
+    _moves = 0;
+    _secondsElapsed = 0;
+    _isGameOver = false;
+    _isGameActive = false; // El juego está listo, pero no activo (reloj parado)
+
+    List<IconData> icons = [
+      Icons.ac_unit, Icons.access_alarm, Icons.airport_shuttle, Icons.all_inclusive,
+      Icons.beach_access, Icons.cake, Icons.camera_alt, Icons.audiotrack,
+      Icons.directions_bike, Icons.emoji_events, Icons.flight, Icons.golf_course,
+      Icons.headphones, Icons.icecream, Icons.local_dining, Icons.map,
+      Icons.navigation, Icons.pets
+    ];
+
+    List<CardModel> tempCards = [];
+    for (int i = 0; i < (gridSize * gridSize) ~/ 2; i++) {
+      final icon = icons[i % icons.length];
+      tempCards.add(CardModel(id: i, icon: icon));
+      tempCards.add(CardModel(id: i, icon: icon));
+    }
+
+    tempCards.shuffle(Random());
+    
+    setState(() {
+      _cards = tempCards;
+    });
+    
+    // NOTA: Ya no llamamos a _startTimer() aquí.
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _secondsElapsed++;
+      });
+    });
+  }

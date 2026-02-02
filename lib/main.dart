@@ -52,3 +52,18 @@ class _GamePageState extends State<GamePage> {
   Timer? _timer;
   int _highScore = 0;
   bool _isGameOver = false;
+
+  bool _isGameActive = false; 
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHighScore();
+    _initializeGame();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }

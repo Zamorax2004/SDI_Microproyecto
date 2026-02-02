@@ -34,3 +34,21 @@ class CardModel {
     this.isMatched = false,
   });
 }
+class GamePage extends StatefulWidget {
+  const GamePage({super.key});
+
+  @override
+  State<GamePage> createState() => _GamePageState();
+}
+
+class _GamePageState extends State<GamePage> {
+  final int gridSize = 6;
+  List<CardModel> _cards = [];
+  
+  List<int> _flippedIndices = [];
+  bool _isProcessing = false;
+  int _moves = 0;
+  int _secondsElapsed = 0;
+  Timer? _timer;
+  int _highScore = 0;
+  bool _isGameOver = false;

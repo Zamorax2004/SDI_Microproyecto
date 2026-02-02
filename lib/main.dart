@@ -67,3 +67,19 @@ class _GamePageState extends State<GamePage> {
     _timer?.cancel();
     super.dispose();
   }
+Future<void> _loadHighScore() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _highScore = prefs.getInt('highScore') ?? 0;
+    });
+  }
+
+  Future<void> _saveHighScore(int newScore) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_highScore == 0 || newScore < _highScore) {
+      await prefs.setInt('highScore', newScore);
+      setState(() {
+        _highScore = newScore;
+      });
+    }
+  }

@@ -123,3 +123,58 @@ Future<void> _loadHighScore() async {
       });
     });
   }
+  void _onCardTap(int index) {
+    if (_isProcessing || _cards[index].isFlipped || _cards[index].isMatched) return;
+
+    // NUEVO: Iniciar el timer solo al primer clic
+    if (!_isGameActive) {
+      _isGameActive = true;
+      _startTimer();
+    }
+
+    setState(() {
+      _cards[index].isFlipped = true;
+      _flippedIndices.add(index);
+    });
+
+    if (_flippedIndices.length == 2) {
+      _isProcessing = true;
+      _moves++;
+      _checkForMatch();
+    }
+  }
+
+  void _checkForMatch() {
+    int index1 = _flippedIndices[0];
+    int index2 = _flippedIndices[1];
+
+    if (_cards[index1].id == _cards[index2].id) {
+      setState(() {
+        _cards[index1].isMatched = true;
+        _cards[index2].isMatched = true;
+        _flippedIndices.clear();
+        _isProcessing = false;
+      });
+      _checkWinCondition();
+    } else {
+      Timer(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          setState(() {
+            _cards[index1].isFlipped = false;
+            _cards[index2].isFlipped = false;
+            _flippedIndices.clear();
+            _isProcessing = false;
+          });
+        }
+      });
+    }
+  }
+
+  void _checkWinCondition() {
+    if (_cards.every((card) => card.isMatched)) {
+      _timer?.cancel();
+      _isGameOver = true;
+      _saveHighScore(_moves);
+      _showWinDialog();
+    }
+  }

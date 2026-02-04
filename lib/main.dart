@@ -67,7 +67,7 @@ class _GamePageState extends State<GamePage> {
     _timer?.cancel();
     super.dispose();
   }
-Future<void> _loadHighScore() async {
+  Future<void> _loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _highScore = prefs.getInt('highScore') ?? 0;
@@ -90,7 +90,7 @@ Future<void> _loadHighScore() async {
     _moves = 0;
     _secondsElapsed = 0;
     _isGameOver = false;
-    _isGameActive = false; // El juego está listo, pero no activo (reloj parado)
+    _isGameActive = false;
 
     List<IconData> icons = [
       Icons.ac_unit, Icons.access_alarm, Icons.airport_shuttle, Icons.all_inclusive,
@@ -112,8 +112,6 @@ Future<void> _loadHighScore() async {
     setState(() {
       _cards = tempCards;
     });
-    
-    // NOTA: Ya no llamamos a _startTimer() aquí.
   }
 
   void _startTimer() {
@@ -126,7 +124,6 @@ Future<void> _loadHighScore() async {
   void _onCardTap(int index) {
     if (_isProcessing || _cards[index].isFlipped || _cards[index].isMatched) return;
 
-    // NUEVO: Iniciar el timer solo al primer clic
     if (!_isGameActive) {
       _isGameActive = true;
       _startTimer();
@@ -177,4 +174,23 @@ Future<void> _loadHighScore() async {
       _saveHighScore(_moves);
       _showWinDialog();
     }
+  }
+  void _showWinDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text("¡Felicidades!"),
+        content: Text("Completaste el juego en $_moves intentos y $_secondsElapsed segundos."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _initializeGame();
+            },
+            child: const Text("Jugar de nuevo"),
+          )
+        ],
+      ),
+    );
   }

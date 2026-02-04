@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/card_model.dart';
 import '../widgets/card_widget.dart';
 import '../widgets/stat_item.dart';
-import 'dart:math';
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key});
@@ -15,15 +17,23 @@ class GamePage extends StatefulWidget {
 
 class _GamePageState extends State<GamePage> {
   final int gridSize = 6;
+
   List<CardModel> _cards = [];
 
-  List<int> _flippedIndices = [];
+  final List<int> _flippedIndices = [];
+
   bool _isProcessing = false;
+  bool _isGameActive = false;
+
   int _moves = 0;
   int _secondsElapsed = 0;
-  Timer? _timer;
   int _highScore = 0;
-  bool _isGameActive = false;
+
+  Timer? _timer;
+
+  // ─────────────────────────────────────
+  // Lifecycle
+  // ─────────────────────────────────────
 
   @override
   void initState() {
@@ -32,8 +42,19 @@ class _GamePageState extends State<GamePage> {
     _initializeGame();
   }
 
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  // ─────────────────────────────────────
+  // Persistence
+  // ─────────────────────────────────────
+
   Future<void> _loadHighScore() async {
     final prefs = await SharedPreferences.getInstance();
+
     setState(() {
       _highScore = prefs.getInt('highScore') ?? 0;
     });
@@ -41,23 +62,31 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> _saveHighScore(int newScore) async {
     final prefs = await SharedPreferences.getInstance();
+
     if (_highScore == 0 || newScore < _highScore) {
       await prefs.setInt('highScore', newScore);
+
       setState(() {
         _highScore = newScore;
       });
     }
   }
 
+  // ─────────────────────────────────────
+  // Game Logic
+  // ─────────────────────────────────────
+
   void _initializeGame() {
     _timer?.cancel();
+
     _flippedIndices.clear();
     _isProcessing = false;
-    _moves = 0;
-    _secondsElapsed = 0;
     _isGameActive = false;
 
-    List<IconData> icons = [
+    _moves = 0;
+    _secondsElapsed = 0;
+
+    final icons = [
       Icons.ac_unit,
       Icons.access_alarm,
       Icons.airport_shuttle,
@@ -75,12 +104,14 @@ class _GamePageState extends State<GamePage> {
       Icons.local_dining,
       Icons.map,
       Icons.navigation,
-      Icons.pets
+      Icons.pets,
     ];
 
-    List<CardModel> tempCards = [];
+    final tempCards = <CardModel>[];
+
     for (int i = 0; i < (gridSize * gridSize) ~/ 2; i++) {
       final icon = icons[i % icons.length];
+
       tempCards.add(CardModel(id: i, icon: icon));
       tempCards.add(CardModel(id: i, icon: icon));
     }
@@ -93,7 +124,7 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         _secondsElapsed++;
       });
@@ -101,7 +132,11 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _onCardTap(int index) {
-    if (_isProcessing || _cards[index].isFlipped || _cards[index].isMatched) return;
+    if (_isProcessing ||
+        _cards[index].isFlipped ||
+        _cards[index].isMatched) {
+      return;
+    }
 
     if (!_isGameActive) {
       _isGameActive = true;
@@ -109,39 +144,51 @@ class _GamePageState extends State<GamePage> {
     }
 
     setState(() {
-      _cards[index].isFlipped = true;
+      _cards[index] =
+          _cards[index].copyWith(isFlipped: true);
+
       _flippedIndices.add(index);
     });
 
     if (_flippedIndices.length == 2) {
       _isProcessing = true;
       _moves++;
+
       _checkForMatch();
     }
   }
 
   void _checkForMatch() {
-    int index1 = _flippedIndices[0];
-    int index2 = _flippedIndices[1];
+    final index1 = _flippedIndices[0];
+    final index2 = _flippedIndices[1];
 
     if (_cards[index1].id == _cards[index2].id) {
       setState(() {
-        _cards[index1].isMatched = true;
-        _cards[index2].isMatched = true;
+        _cards[index1] =
+            _cards[index1].copyWith(isMatched: true);
+
+        _cards[index2] =
+            _cards[index2].copyWith(isMatched: true);
+
         _flippedIndices.clear();
         _isProcessing = false;
       });
+
       _checkWinCondition();
     } else {
-      Timer(const Duration(milliseconds: 1000), () {
-        if (mounted) {
-          setState(() {
-            _cards[index1].isFlipped = false;
-            _cards[index2].isFlipped = false;
-            _flippedIndices.clear();
-            _isProcessing = false;
-          });
-        }
+      Timer(const Duration(milliseconds: 900), () {
+        if (!mounted) return;
+
+        setState(() {
+          _cards[index1] =
+              _cards[index1].copyWith(isFlipped: false);
+
+          _cards[index2] =
+              _cards[index2].copyWith(isFlipped: false);
+
+          _flippedIndices.clear();
+          _isProcessing = false;
+        });
       });
     }
   }
@@ -149,9 +196,44 @@ class _GamePageState extends State<GamePage> {
   void _checkWinCondition() {
     if (_cards.every((card) => card.isMatched)) {
       _timer?.cancel();
+
       _saveHighScore(_moves);
       _showWinDialog();
     }
+  }
+
+  // ─────────────────────────────────────
+  // UI Helpers
+  // ─────────────────────────────────────
+
+  String _formattedTime() {
+    final minutes = _secondsElapsed ~/ 60;
+    final seconds = _secondsElapsed % 60;
+
+    return "${minutes.toString().padLeft(2, '0')}:"
+        "${seconds.toString().padLeft(2, '0')}";
+  }
+
+  void _confirmRestart() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("¿Reiniciar juego?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initializeGame();
+            },
+            child: const Text("Reiniciar"),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showWinDialog() {
@@ -160,19 +242,26 @@ class _GamePageState extends State<GamePage> {
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         title: const Text("¡Felicidades!"),
-        content: Text("Completaste el juego en $_moves intentos y $_secondsElapsed segundos."),
+        content: Text(
+          "Completaste el juego en $_moves intentos\n"
+          "Tiempo: ${_formattedTime()}",
+        ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pop(context);
               _initializeGame();
             },
             child: const Text("Jugar de nuevo"),
-          )
+          ),
         ],
       ),
     );
   }
+
+  // ─────────────────────────────────────
+  // UI
+  // ─────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -182,35 +271,45 @@ class _GamePageState extends State<GamePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _initializeGame,
-          )
+            onPressed: _confirmRestart,
+          ),
         ],
       ),
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             color: Colors.indigo.shade50,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 StatItem(label: "Intentos", value: "$_moves"),
-                StatItem(label: "Tiempo", value: "${_secondsElapsed}s"),
+                StatItem(label: "Tiempo", value: _formattedTime()),
                 StatItem(label: "Récord", value: "$_highScore"),
               ],
             ),
           ),
+
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(4.0),
+              padding: const EdgeInsets.all(4),
               child: GridView.builder(
+                physics:
+                    const NeverScrollableScrollPhysics(),
                 itemCount: _cards.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 6),
-                itemBuilder: (context, index) => CardWidget(
-                  card: _cards[index],
-                  onTap: () => _onCardTap(index),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
                 ),
+                itemBuilder: (context, index) {
+                  return CardWidget(
+                    card: _cards[index],
+                    onTap: () => _onCardTap(index),
+                  );
+                },
               ),
             ),
           ),

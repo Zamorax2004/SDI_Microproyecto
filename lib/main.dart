@@ -194,3 +194,46 @@ class _GamePageState extends State<GamePage> {
       ),
     );
   }
+  // ─── Widgets auxiliares ────────────────────────────────────────────
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo, fontSize: 12)),
+        Text(value, style: const TextStyle(fontSize: 16)),
+      ],
+    );
+  }
+
+  Widget _buildCard(CardModel card) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: card.isMatched 
+            ? Colors.green.shade300 
+            : (card.isFlipped ? Colors.white : Colors.indigo),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.indigo.shade900),
+      ),
+      child: Center(
+        child: card.isFlipped || card.isMatched
+            ? Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Icon(
+                    card.icon, 
+                    color: card.isMatched ? Colors.white : Colors.indigo,
+                  ),
+                ),
+              )
+            : const Icon(
+                Icons.help_outline, 
+                color: Colors.white54, 
+                size: 20,
+              ),
+      ),
+    );
+  }
+}
